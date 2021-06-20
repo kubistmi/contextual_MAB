@@ -114,14 +114,14 @@ class Oracle(ABC):
 class LinRegOracle(Oracle):
     #
     def __fit_oracle__(self, oracle: int, X: pd.DataFrame):
-        y = X["reward"]
+        y = X[["reward"]]
         X = X.drop(["reward","action"], axis = 1)
         self.oracles[oracle] = LinearRegression().fit(X,y)
     #
     def __predict_oracle__(self, oracle:int, X: pd.DataFrame) -> int:
         if not self.__check_fitted__(oracle):
             return 0
-        return(self.oracles[oracle].predict(X)[0])
+        return(self.oracles[oracle].predict(X)[0][0])
 
 
 ###############################################################################
@@ -180,10 +180,10 @@ class Agent(ABC):
         self.context = pd.DataFrame()
         self.action = 0
     #
-    def act(self, X: pd.DataFrame) -> int:
+    def act(self, X: pd.DataFrame, time: int) -> int:
         self.context = X
         pred = self.oracle.predict(X)
-        self.action = self.policy.decide(pred)
+        self.action = self.policy.decide(pred, time)
         return(self.action)
     #
     def save_iter(self, reward: int) -> None:
@@ -239,10 +239,10 @@ class ChurnEnvironment(Environment):
 ###############################################################################
 def learn(agent: Agent, env: Environment, iters: int, update_freq: int) -> None:
     for i in range(iters):
-        if i % update_freq == 0:
+        if i > 0 and i % update_freq == 0:
             agent.update()
         cx = env.give_context()
-        act = agent.act(cx)
+        act = agent.act(cx, i)
         rew = env.evaluate(act)
         agent.save_iter(rew)
     return(agent)
