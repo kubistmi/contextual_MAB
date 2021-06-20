@@ -243,7 +243,7 @@ class ChurnEnvironment(Environment):
         out = self.rewards.loc[
             (self.rewards.act == obs.action) & (self.rewards.pred == action)
             ]
-        return(out.val)
+        return(out.val.iat[0])
 
 ###############################################################################
 # Learn                                                                       #
