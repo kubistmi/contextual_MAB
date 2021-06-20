@@ -210,10 +210,21 @@ class Environment(ABC):
 class ChurnEnvironment(Environment):
     #
     def __init__(self, data: pd.DataFrame, rewards: pd.DataFrame, balanced = True):
+        #
+        # validate data
         if not (data.columns == "action").any():
             raise AttributeError("Column 'action' not found in the DataFrame")
         self.data = data
+        #
+        # validate rewards
+        cols = pd.Series(["act","pred","val"])
+        if not cols.isin(rewards.columns).all():
+            raise AttributeError(
+                f"Table `rewards` has wrong colnames, expected: {cols.values}, got: {rewards.columns.values}"
+                )
         self.rewards = rewards
+        #
+        # finish the setup  
         self.balanced = balanced
         self.index = 0
         self.actions = data.action.unique()
