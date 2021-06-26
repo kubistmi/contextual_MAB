@@ -14,18 +14,19 @@ from sklearn.utils.validation import check_is_fitted
 ###############################################################################
 class DataProvider(ABC):
     #
-    def __init__(self):
+    def __init__(self, batchsize: int):
         self.contexts = []
         self.actions = []
         self.rewards = []
+        self.defsize = batchsize
     #
     def size(self) -> int:
         return(len(self.contexts))
     #
-    def __checksize__(self, size: int) -> None:
+    def __checksize__(self, size: int, lt: bool = False) -> None:
         if size == 0:
             raise ValueError("Parameter `size` must be nonzero")
-        elif size > self.size():
+        elif (size > self.size()) and not lt:
             raise ValueError(f"Value of parameter `size` is too large, max allowed: {self.size()}")
     #
     def collect(self, context: pd.DataFrame, action: int, reward: float) -> None:
@@ -40,7 +41,10 @@ class DataProvider(ABC):
 
 class BatchProvider(DataProvider):
     #
-    def provide(self, size: int) -> pd.DataFrame:
+    def provide(self, size: int = None) -> pd.DataFrame:
+        if size is None:
+            size = self.defsize
+        #
         self.__checksize__(size)
         if size < 0:
             out = (
@@ -61,8 +65,11 @@ class BatchProvider(DataProvider):
 
 class SampleProvider(DataProvider):
     #
-    def provide(self, size: int) -> pd.DataFrame:
-        self.__checksize__(size)
+    def provide(self, size: int = None) -> pd.DataFrame:
+        if size is None:
+            size = self.defsize
+        #
+        self.__checksize__(size, True)
         if size < 0:
             size = self.size()
         ix = randint(self.size(), size = size)
@@ -171,17 +178,13 @@ class AdaGreedPolicy(Policy):
 ###############################################################################
 class Agent(ABC):
     #    
-    def __init__(self, provider: DataProvider, oracle: Oracle, policy: Policy, batchsize: int):
+    def __init__(self, provider: DataProvider, oracle: Oracle, policy: Policy):
         super().__init__()
         self.provider = provider
-        self.size = batchsize
         self.oracle = oracle
         self.policy = policy
-        self.context = pd.DataFrame()
-        self.action = 0
     #
     def act(self, X: pd.DataFrame, time: int) -> int:
-        self.context = X
         pred = self.oracle.predict(X)
         self.action = self.policy.decide(pred, time)
         return(self.action)
