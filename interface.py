@@ -5,7 +5,7 @@ import numpy as np
 from numpy.random import randint, choice
 import pandas as pd
 
-from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
@@ -132,6 +132,24 @@ class LinRegOracle(Oracle):
             return 0
         return(self.oracles[oracle].predict(X)[0][0])
 
+
+class RegTreeOracle(Oracle):
+    #
+    def __init__(self, actions: List[int], depth: int = None):
+        super().__init__(actions)
+        self.depth = depth
+    #
+    def __fit_oracle__(self, oracle: int, X: pd.DataFrame) -> None:
+        if X.shape[0] == 0:
+            return 
+        y = X[["reward"]]
+        X = X.drop(["reward","action"], axis = 1)
+        self.oracles[oracle] = DecisionTreeRegressor(max_depth = self.depth).fit(X,y)
+    #
+    def __predict_oracle__(self, oracle:int, X: pd.DataFrame) -> int:
+        if not self.__check_fitted__(oracle):
+            return 0
+        return(self.oracles[oracle].predict(X)[0])
 
 ###############################################################################
 # Policy                                                                      #
