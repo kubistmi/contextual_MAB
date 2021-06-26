@@ -90,7 +90,7 @@ class Oracle(ABC):
         self.actions = actions
         self.oracles = {a : LinearRegression() for a in actions}
     #
-    def fit(self, X: pd.DataFrame):
+    def fit(self, X: pd.DataFrame) -> None:
         for i in self.actions:
             self.__fit_oracle__(i, X.query("action == @i"))
     #
@@ -120,7 +120,9 @@ class Oracle(ABC):
 
 class LinRegOracle(Oracle):
     #
-    def __fit_oracle__(self, oracle: int, X: pd.DataFrame):
+    def __fit_oracle__(self, oracle: int, X: pd.DataFrame) -> None:
+        if X.shape[0] == 0:
+            return 
         y = X[["reward"]]
         X = X.drop(["reward","action"], axis = 1)
         self.oracles[oracle] = LinearRegression().fit(X,y)
@@ -137,11 +139,11 @@ class LinRegOracle(Oracle):
 class Policy(ABC):
     #
     @abstractmethod
-    def set_params(self):
+    def set_params(self) -> None:
         pass
     #
     @abstractmethod
-    def get_params(self):
+    def get_params(self) -> Dict[str,int]:
         pass
     #
     @abstractmethod
@@ -151,12 +153,13 @@ class Policy(ABC):
 
 class AdaGreedPolicy(Policy):
     #
-    def __init__(self, thresh: int, decay: int):
+    def __init__(self, thresh: int, decay: int, soft: bool = True):
         self.inthresh = thresh
         self.thresh = thresh
         self.decay = decay
+        self.soft = soft
     #
-    def set_params(self, **parameters):
+    def set_params(self, **parameters) -> None:
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
     #
@@ -164,6 +167,9 @@ class AdaGreedPolicy(Policy):
         return {"decay": self.decay, "thresh": self.thresh}
     #
     def decide(self, rewards: pd.Series, time: int) -> int:
+        if self.soft:
+            rewards = softmax(rewards)
+        #
         maxR = rewards.max()
         if maxR > self.thresh:
             action = rewards.argmax()
@@ -260,3 +266,7 @@ def learn(agent: Agent, env: Environment, iters: int, update_freq: int) -> None:
         rew = env.evaluate(act)
         agent.save_iter(rew)
     return(agent)
+
+def softmax(x: pd.Series) -> pd.Series:
+    e_x = np.exp(x - x.max())
+    return e_x / e_x.sum()
