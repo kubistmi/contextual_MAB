@@ -192,14 +192,13 @@ class Agent(ABC):
     #
     def act(self, X: pd.DataFrame, time: int) -> int:
         pred = self.oracle.predict(X)
-        self.action = self.policy.decide(pred, time)
-        return(self.action)
+        return(self.policy.decide(pred, time))
     #
-    def save_iter(self, reward: int) -> None:
-        self.provider.collect(self.context, self.action, reward)
+    def save_iter(self, context: pd.DataFrame, action:int, reward: int) -> None:
+        self.provider.collect(context, action, reward)
     #
     def update(self) -> None:
-        history = self.provider.provide(self.size)
+        history = self.provider.provide()
         self.oracle.fit(history)
 
 
@@ -209,7 +208,7 @@ class Agent(ABC):
 class Environment(ABC):
     #
     @abstractmethod
-    def give_context(self) -> pd.DataFrame:
+    def get_context(self) -> pd.DataFrame:
         pass
     #
     @abstractmethod
@@ -238,7 +237,7 @@ class ChurnEnvironment(Environment):
         self.index = 0
         self.actions = data.action.unique()
     #
-    def give_context(self) -> pd.DataFrame:
+    def get_context(self) -> pd.DataFrame:
         if self.balanced:
             act = choice(self.actions)
             out = self.data.loc[self.data.action == act].sample(1)
@@ -261,10 +260,10 @@ def learn(agent: Agent, env: Environment, iters: int, update_freq: int) -> None:
     for i in range(iters):
         if i > 0 and i % update_freq == 0:
             agent.update()
-        cx = env.give_context()
+        cx = env.get_context()
         act = agent.act(cx, i)
         rew = env.evaluate(act)
-        agent.save_iter(rew)
+        agent.save_iter(cx, act, rew)
     return(agent)
 
 def softmax(x: pd.Series) -> pd.Series:
