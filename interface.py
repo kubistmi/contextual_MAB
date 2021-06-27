@@ -219,16 +219,24 @@ class NeuralOracle(Oracle):
 class Policy(ABC):
     #
     @abstractmethod
-    def set_params(self) -> None:
-        pass
-    #
-    @abstractmethod
-    def get_params(self) -> Dict[str,int]:
-        pass
-    #
-    @abstractmethod
     def decide(self, rewards: pd.Series, time: int) -> int:
         pass
+
+
+class EpsGreedPolicy(Policy):
+    #
+    def __init__(self, thresh: int):
+        self.thresh = thresh
+    #
+    def decide(self, rewards: pd.Series, time: int) -> int:
+        limit = np.random.random()
+        if rewards.unique().shape[0] == 1:
+            action = rewards.reset_index()["index"].sample(1).iat[0]        
+        elif limit > self.thresh:
+            action = rewards.argmax()
+        else:
+            action = rewards.reset_index()["index"].sample(1).iat[0]
+        return(action)
 
 
 class AdaGreedPolicy(Policy):
