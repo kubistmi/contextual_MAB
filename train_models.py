@@ -5,10 +5,10 @@ import mlflow as mf
 import numpy as np
 import pandas as pd
 
-from interface import AdaGreedPolicy, EpsGreedPolicy
-from interface import BatchProvider, SampleProvider
-from interface import NeuralOracle, OnRegOracle, RegTreeOracle
-from interface import Agent, ChurnEnvironment, learn
+from src.policy import AdaGreedPolicy, EpsGreedPolicy
+from src.provider import BatchProvider, SampleProvider
+from src.oracle import NeuralOracle, OnRegOracle, RegTreeOracle
+from src.domain import Agent, ChurnEnvironment, learn
 
 ITER = 8000
 
