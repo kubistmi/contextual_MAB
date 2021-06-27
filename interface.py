@@ -5,6 +5,8 @@ import numpy as np
 from numpy.random import randint, choice
 import pandas as pd
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression, SGDRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
@@ -152,6 +154,27 @@ class RegTreeOracle(Oracle):
             return self.minrew
         return(self.oracles[oracle].predict(X)[0])
 
+class OnRegOracle(Oracle):
+    #
+    def __init__(self, actions: List[int], min_reward:int):
+        self.minrew = min_reward
+        self.actions = actions
+        self.scalers = {a : StandardScaler() for a in actions}
+        self.oracles = {a : SGDRegressor() for a in actions}
+    #
+    def __fit_oracle__(self, oracle: int, X: pd.DataFrame) -> None:
+        if X.shape[0] == 0:
+            return 
+        y = X["reward"]
+        X =  X.drop(["reward","action"], axis = 1)
+        self.scalers[oracle] = self.scalers[oracle].partial_fit(X)
+        X = self.scalers[oracle].transform(X)
+        self.oracles[oracle] = self.oracles[oracle].partial_fit(X,y)
+    #
+    def __predict_oracle__(self, oracle:int, X: pd.DataFrame) -> int:
+        if not self.__check_fitted__(oracle):
+            return self.minrew
+        X = self.scalers[oracle].transform(X)
         return(self.oracles[oracle].predict(X)[0])
 
 ###############################################################################
