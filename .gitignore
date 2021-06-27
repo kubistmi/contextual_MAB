@@ -1,3 +1,5 @@
 *.pyc
+*.png
+.ipynb_checkpoints
 mlruns
 models
