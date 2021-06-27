@@ -86,7 +86,8 @@ class SampleProvider(DataProvider):
 ###############################################################################
 class Oracle(ABC):
     #
-    def __init__(self, actions: List[int]):
+    def __init__(self, actions: List[int], min_reward: int):
+        self.minrew = min_reward
         self.actions = actions
         self.oracles = {a : LinearRegression() for a in actions}
     #
@@ -129,14 +130,14 @@ class LinRegOracle(Oracle):
     #
     def __predict_oracle__(self, oracle:int, X: pd.DataFrame) -> int:
         if not self.__check_fitted__(oracle):
-            return 0
+            return self.minrew
         return(self.oracles[oracle].predict(X)[0][0])
 
 
 class RegTreeOracle(Oracle):
     #
-    def __init__(self, actions: List[int], depth: int = None):
-        super().__init__(actions)
+    def __init__(self, actions: List[int], min_reward:int, depth: int = None):
+        super().__init__(actions, min_reward)
         self.depth = depth
     #
     def __fit_oracle__(self, oracle: int, X: pd.DataFrame) -> None:
@@ -148,7 +149,9 @@ class RegTreeOracle(Oracle):
     #
     def __predict_oracle__(self, oracle:int, X: pd.DataFrame) -> int:
         if not self.__check_fitted__(oracle):
-            return 0
+            return self.minrew
+        return(self.oracles[oracle].predict(X)[0])
+
         return(self.oracles[oracle].predict(X)[0])
 
 ###############################################################################
@@ -189,7 +192,9 @@ class AdaGreedPolicy(Policy):
             rewards = softmax(rewards)
         #
         maxR = rewards.max()
-        if maxR > self.thresh:
+        if rewards.unique().shape[0] == 1:
+            action = rewards.reset_index()["index"].sample(1).iat[0]
+        elif maxR > self.thresh:
             action = rewards.argmax()
         else:
             action = rewards.reset_index()["index"].sample(1).iat[0]
@@ -218,6 +223,11 @@ class Agent(ABC):
     def update(self) -> None:
         history = self.provider.provide()
         self.oracle.fit(history)
+    #
+    def replay(self) -> None:
+        history = self.provider.provide(self.provider.size())
+        self.oracle.fit(history)
+
 
 
 ###############################################################################
@@ -274,10 +284,17 @@ class ChurnEnvironment(Environment):
 ###############################################################################
 # Learn                                                                       #
 ###############################################################################
-def learn(agent: Agent, env: Environment, iters: int, update_freq: int) -> None:
+def learn(agent: Agent, env: Environment, iters: int, update_freq: int, replay_freq : int = None) -> None:
+    replay = True
+    if replay_freq is None:
+        replay = False
+    #
     for i in range(iters):
-        if i > 0 and i % update_freq == 0:
-            agent.update()
+        if i > 0:
+            if replay and (i % replay_freq == 0):
+                agent.replay()
+            elif i % update_freq == 0:
+                agent.update()
         cx = env.get_context()
         act = agent.act(cx, i)
         rew = env.evaluate(act)
