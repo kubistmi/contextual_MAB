@@ -11,6 +11,9 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.validation import check_is_fitted
 
+import tensorflow as tf
+from tensorflow.keras.models import clone_model
+
 ###############################################################################
 # Data provider                                                               #
 ###############################################################################
@@ -176,6 +179,39 @@ class OnRegOracle(Oracle):
             return self.minrew
         X = self.scalers[oracle].transform(X)
         return(self.oracles[oracle].predict(X)[0])
+
+class NeuralOracle(Oracle):
+    #
+    def __init__(self, actions: List[int], min_reward:int, base_model: tf.keras.Sequential, batch: int,  epochs: int, verbose : int = 2):
+        self.minrew = min_reward
+        self.actions = actions
+        self.base_model = base_model
+        self.epochs = epochs
+        self.batch = batch
+        self.verbose = verbose
+        self.fitted = {a: False for a in actions}
+        self.scalers = {a : StandardScaler() for a in actions}
+        self.oracles = {a : clone_model(base_model) for a in actions}
+        [self.oracles[a].compile(loss = 'mse', optimizer = 'adam') for a in actions]
+    #
+    def __fit_oracle__(self, oracle: int, X: pd.DataFrame) -> None:
+        if X.shape[0] == 0:
+            return
+        y = X[["reward"]]
+        X = X.drop(["reward","action"], axis = 1)
+        #
+        self.scalers[oracle] = self.scalers[oracle].partial_fit(X)
+        X = self.scalers[oracle].transform(X)
+        data = tf.data.Dataset.from_tensor_slices((X, y)).batch(self.batch)
+        self.oracles[oracle].fit(data, epochs = self.epochs, verbose = self.verbose)
+        self.fitted[oracle] = True
+    #
+    def __predict_oracle__(self, oracle:int, X: pd.DataFrame) -> int:
+        if not self.fitted[oracle]:
+            return self.minrew
+        X = self.scalers[oracle].transform(X)
+        return(self.oracles[oracle].predict(X)[0][0])
+
 
 ###############################################################################
 # Policy                                                                      #
