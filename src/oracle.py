@@ -11,6 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 
 import tensorflow as tf
 from tensorflow.keras.models import clone_model
+from tensorflow.keras import layers
 
 ## ORACLE ######################################################################
 # Oracle is a wrapper around set of models used to predict reward based on context
@@ -31,7 +32,6 @@ class Oracle(ABC):
             for i in self.actions
         }
         return(pd.Series(out))
-        
     #
     def __check_fitted__(self, oracle: int) -> bool:
         try:
@@ -111,7 +111,7 @@ class OnRegOracle(Oracle):
         X = self.scalers[oracle].transform(X)
         return(self.oracles[oracle].predict(X)[0])
 
-# OnRegOracle wraps around sequential neural net model from tensorflow
+# NeuralOracle wraps around sequential neural net model from tensorflow
 # - Keras fitting regime allows for online method of training
 # - intended to be used with BatchProvider
 class NeuralOracle(Oracle):
@@ -145,3 +145,9 @@ class NeuralOracle(Oracle):
             return self.minrew
         X = self.scalers[oracle].transform(X)
         return(self.oracles[oracle].predict(X)[0][0])
+
+# base model serves as a template on how to specify this parameter in NeuralOracle 
+base_model = tf.keras.Sequential()
+base_model.add(layers.Dense(20, activation = 'relu', input_shape=(30,)))
+base_model.add(layers.Dense(10, activation = 'relu'))
+base_model.add(layers.Dense(1))

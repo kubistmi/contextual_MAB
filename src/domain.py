@@ -88,7 +88,7 @@ class ChurnEnvironment(Environment):
 
 # LEARN ########################################################################
 # Learn function handles the iterative learning of the Agent using the Environment
-def learn(agent: Agent, env: Environment, iters: int, update_freq: int, replay_freq : int = None) -> None:
+def learn(agent: Agent, env: Environment, iters: int, update_freq: int, replay_freq : int = None) -> Agent:
     replay = True
     if replay_freq is None:
         replay = False
