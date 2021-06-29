@@ -12,7 +12,6 @@ from src.policy import Policy
 class Agent(ABC):
     #    
     def __init__(self, provider: DataProvider, oracle: Oracle, policy: Policy):
-        super().__init__()
         self.provider = provider
         self.oracle = oracle
         self.policy = policy
