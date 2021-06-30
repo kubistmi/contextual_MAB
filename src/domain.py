@@ -41,7 +41,7 @@ class Environment(ABC):
         pass
     #
     @abstractmethod
-    def evaluate(self, action: int) -> None:
+    def evaluate(self, action: int) -> float:
         pass
 
 
@@ -77,7 +77,7 @@ class ChurnEnvironment(Environment):
         self.index = out.index[0]
         return(out.drop(["action"], axis = 1))
     #
-    def evaluate(self, action: int) -> int: 
+    def evaluate(self, action: int) -> float: 
         obs = self.data.loc[self.index]
         out = self.rewards.loc[
             (self.rewards.act == obs.action) & (self.rewards.pred == action)
